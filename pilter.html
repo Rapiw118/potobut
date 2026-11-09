@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Photo Booth - Filter & Bingkai</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#fff5f9;--card:#fff;--tx:#2a2233;--mut:#7d7189;--ac:#e8508f;--ac2:#fff;--bd:#f0dce6;color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#17121c;--card:#221b29;--tx:#f4eef8;--mut:#a99bb5;--ac:#ff6fa8;--ac2:#2a0f1c;--bd:#382c42;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#17121c;--card:#221b29;--tx:#f4eef8;--mut:#a99bb5;--ac:#ff6fa8;--ac2:#2a0f1c;--bd:#382c42;color-scheme:dark}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.4}
+.wrap{max-width:1050px;margin:0 auto;padding:16px}
+h1{font-size:1.5rem;margin:4px 0 2px}
+.sub{color:var(--mut);margin:0 0 14px;font-size:.92rem}
+.grid{display:grid;gap:14px;grid-template-columns:1fr}
+@media(min-width:860px){.grid{grid-template-columns:1.15fr 1fr}}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:18px;padding:12px}
+.card h2{font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin:2px 4px 8px}
+.cam{position:relative;border-radius:14px;overflow:hidden;background:#000;aspect-ratio:4/3;max-height:62vh;width:100%}
+video{width:100%;height:100%;object-fit:cover;display:block}
+video.mirror{transform:scaleX(-1)}
+.msg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;color:#fff;padding:20px;font-size:.95rem}
+#cd{position:absolute;inset:0;display:none;align-items:center;justify-content:center;font-size:7rem;font-weight:800;color:#fff;text-shadow:0 4px 24px rgba(0,0,0,.6)}
+#flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;transition:opacity .35s}
+#cnt{position:absolute;left:10px;top:10px;background:rgba(0,0,0,.55);color:#fff;border-radius:999px;padding:3px 12px;font-size:.85rem}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+.row.c{justify-content:center}
+button,select{font:inherit;color:var(--tx);background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:9px 13px;cursor:pointer}
+button:disabled{opacity:.5;cursor:default}
+button.pri{background:var(--ac);color:var(--ac2);border-color:var(--ac);font-weight:700}
+.shut{width:72px;height:72px;border-radius:50%;padding:0;box-shadow:0 0 0 5px var(--card),0 0 0 8px var(--ac)}
+#rev{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:rgba(0,0,0,.88);padding:10px}
+#rev img{max-width:100%;max-height:72%;border-radius:10px;object-fit:contain}
+#rev .row{margin:0}
+.chip.on{border-color:var(--ac);box-shadow:0 0 0 2px var(--ac) inset;font-weight:700}
+.prev{display:flex;justify-content:center;background:repeating-conic-gradient(var(--bd) 0 25%,transparent 0 50%) 0 0/20px 20px;border-radius:14px;padding:12px}
+#out{max-width:100%;max-height:62vh;width:auto;height:auto;border-radius:6px;box-shadow:0 6px 24px rgba(0,0,0,.25)}
+.frames{display:flex;gap:10px;overflow-x:auto;padding:4px 2px 8px}
+.fr{flex:0 0 auto;width:84px;border:2px solid transparent;border-radius:10px;padding:3px;background:var(--card);cursor:pointer;text-align:center;font-size:.72rem;color:var(--mut)}
+.fr canvas{width:100%;height:auto;display:block;border-radius:6px}
+.fr.on{border-color:var(--ac);color:var(--tx);font-weight:700}
+input[type=text]{font:inherit;color:var(--tx);background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:9px 12px;flex:1;min-width:140px}
+#ov{position:fixed;inset:0;background:rgba(0,0,0,.8);display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:20px;z-index:9;color:#fff;text-align:center}
+#ov img{max-width:92vw;max-height:72vh;border-radius:8px}
+.full{grid-column:1/-1}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>📸 Photo Booth</h1>
+  <p class="sub">Pilih bingkai, efek foto, ambil gambar, lalu unduh hasilnya.</p>
+  <div class="grid">
+    <div class="card">
+      <h2>Kamera</h2>
+      <div class="cam">
+        <video id="v" playsinline muted autoplay></video>
+        <div class="msg" id="msg">Mengaktifkan kamera…</div>
+        <div id="cd"></div><div id="flash"></div><div id="cnt"></div>
+        <div id="rev"><img id="revi" alt="Hasil foto"><div class="row c"><button id="rv1">↺ Ulangi foto ini</button><button class="pri" id="rv2">Lanjut ▶</button></div></div>
+      </div>
+      <div class="row c">
+        <button id="sw" title="Ganti kamera">🔄 Ganti</button>
+        <button class="pri shut" id="shot" title="Ambil foto" aria-label="Ambil foto"></button>
+        <button id="mir" class="chip on">🪞 Cermin</button>
+      </div>
+      <div class="row c">
+        <label>Timer
+          <select id="tm"><option value="0">Langsung</option><option value="3" selected>3 detik</option><option value="5">5 detik</option><option value="10">10 detik</option></select>
+        </label>
+        <button id="up">🖼️ Dari galeri</button>
+        <input type="file" id="file" accept="image/*" multiple hidden>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Hasil & Efek Foto</h2>
+      <div class="row" style="margin-top:0;margin-bottom:8px">
+        <label style="width:100%;font-size:0.85rem">Pilih Filter / Efek:
+          <select id="filterSel" style="width:100%;margin-top:4px">
+            <option value="normal">Normal (Asli)</option>
+            <option value="bright"> ✨ Mempercerah Wajah (Glow)</option>
+            <option value="bw"> ⚫ Black & White (Monokrom)</option>
+            <option value="sepia"> 📜 Sepia (Klasik)</option>
+            <option value="vivid"> 🌈 Vivid (Warna Kontras Hidup)</option>
+            <option value="cool"> ❄️ Cool Blue (Sejuk)</option>
+          </select>
+        </label>
+      </div>
+      <div class="prev"><canvas id="out"></canvas></div>
+      <div class="row">
+        <input type="text" id="cap" maxlength="24" placeholder="Tulisan di bingkai (opsional)">
+      </div>
+      <div class="row">
+        <button id="reset">↺ Ulangi</button>
+        <button class="pri" id="dl" style="flex:1">⬇️ Unduh Foto</button>
+      </div>
+    </div>
+
+    <div class="card full">
+      <h2>Tata letak</h2>
+      <div class="row" style="margin:0 0 10px" id="lays"></div>
+      <h2>Pilih bingkai</h2>
+      <div class="frames" id="frames"></div>
+    </div>
+  </div>
+</div>
+
+<div id="ov"><div id="ovt">Tekan lama gambar untuk menyimpan</div><img id="ovi" alt="Hasil foto"><button id="ovc">Tutup</button></div>
+
+<script>
+const LAY={single:{n:'1 Foto',W:1080,H:1440,c:1,r:1},strip:{n:'Strip 3',W:600,H:1800,c:1,r:3},grid:{n:'Kolase 4',W:1080,H:1440,c:2,r:2}};
+
+const T=[
+{n:'Polaroid',bg:'#ffffff',fg:'#333',st:'#e3e3e3',cap:'Good Times'},
+{n:'Pink Hearts',bg:['#ffd6e8','#ff9ec7'],fg:'#fff',st:'#fff',d:'💖',cap:'Cute Moments'},
+{n:'Neon',bg:['#12062e','#07163f'],fg:'#5ff',st:'#0ff',glow:1,d:'✨',cap:'Night Out'},
+{n:'Film',bg:'#141414',fg:'#f5c542',st:'#f5c542',film:1,cap:'Memories'},
+{n:'Floral',bg:['#eaf7e2','#cfeccb'],fg:'#4a7a4a',st:'#fff',d:'🌸',cap:'Spring Day'},
+{n:'Starry',bg:['#27296d','#7a3fa5'],fg:'#ffe8a3',st:'#ffe8a3',d:'⭐',cap:'Dream Big'},
+{n:'Vintage',bg:'#f1e3c6',fg:'#6b4a2b',st:'#6b4a2b',dash:1,cap:'Old Friends'},
+{n:'Summer',bg:['#8fd3ff','#ffe6a1'],fg:'#fff',st:'#fff',d:'☀️',cap:'Summer Vibes'},
+{n:'Teddy',bg:['#ffe9d6','#ffc9a3'],fg:'#8a4b2a',st:'#fff',d:'🐻',cap:'Best Friends'},
+{n:'Mono',bg:'#000',fg:'#fff',st:'#fff',cap:'Black & White'},
+{n:'Sunset',bg:['#ff7e5f','#feb47b'],fg:'#fff',st:'#fff',d:'🌅',cap:'Golden Hour'},
+{n:'Minty',bg:['#d4fc79','#96e6a1'],fg:'#2e5a36',st:'#fff',d:'🍃',cap:'Fresh Day'},
+{n:'Cyber',bg:['#000000','#0f2027'],fg:'#00ffcc',st:'#00ffcc',glow:1,d:'⚡',cap:'Cyberpunk'},
+{n:'Pastel Purple',bg:['#e2d1c3','#f3e7e9'],fg:'#5c4b51',st:'#fff',d:'💜',cap:'Dreamy Vibe'}
+];
+
+const $=id=>document.getElementById(id);
+let layout='single',ti=0,photos=[],busy=false,facing='user',mirror=true,stream=null,currentFilter='normal';
+
+function rr(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath()}
+
+function applyFilter(ctx, w, h, filterType) {
+  if (filterType === 'normal') return;
+  const imgData = ctx.getImageData(0, 0, w, h);
+  const data = imgData.data;
+
+  for (let i = 0; i < data.length; i += 4) {
+    let r = data[i], g = data[i+1], b = data[i+2];
+
+    if (filterType === 'bright') {
+      r = Math.min(255, r * 1.15 + 15);
+      g = Math.min(255, g * 1.15 + 15);
+      b = Math.min(255, b * 1.15 + 15);
+    } else if (filterType === 'bw') {
+      const avg = 0.3 * r + 0.59 * g + 0.11 * b;
+      r = avg; g = avg; b = avg;
+    } else if (filterType === 'sepia') {
+      r = Math.min(255, (r * 0.393) + (g * 0.769) + (b * 0.189));
+      g = Math.min(255, (r * 0.349) + (g * 0.686) + (b * 0.168));
+      b = Math.min(255, (r * 0.272) + (g * 0.534) + (b * 0.131));
+    } else if (filterType === 'vivid') {
+      r = Math.min(255, ((r / 255 - 0.5) * 1.3 + 0.5) * 255);
+      g = Math.min(255, ((g / 255 - 0.5) * 1.3 + 0.5) * 255);
+      b = Math.min(255, ((b / 255 - 0.5) * 1.3 + 0.5) * 255);
+    } else if (filterType === 'cool') {
+      r = r * 0.9;
+      b = Math.min(255, b * 1.2);
+    }
+
+    data[i] = r; data[i+1] = g; data[i+2] = b;
+  }
+  ctx.putImageData(imgData, 0, 0);
+}
+
+function cover(c,img,x,y,w,h,filterType){
+  const iw=img.width,ih=img.height,s=Math.max(w/iw,h/ih),sw=w/s,sh=h/s;
+  c.drawImage(img,(iw-sw)/2,(ih-sh)/2,sw,sh,x,y,w,h);
+  applyFilter(c, w, h, filterType);
+}
+
+function draw(cv,L,t,ph,cap,s){
+  const {W,H,c:cols,r:rows}=LAY[L];
+  cv.width=Math.round(W*s);cv.height=Math.round(H*s);
+  const x=cv.getContext('2d');x.scale(s,s);
+  if(Array.isArray(t.bg)){const g=x.createLinearGradient(0,0,W,H);g.addColorStop(0,t.bg[0]);g.addColorStop(1,t.bg[1]);x.fillStyle=g}else x.fillStyle=t.bg;
+  x.fillRect(0,0,W,H);
+  const m=W*(t.film?.09:.06),foot=H*(L==='strip'?.1:.14),gap=m/2;
+  const sw=(W-2*m-(cols-1)*gap)/cols,sh=(H-m-foot-(rows-1)*gap)/rows;
+  if(t.film){x.fillStyle='#fff';for(let y=14;y<H-20;y+=46){rr(x,m*.28,y,m*.44,26,6);x.fill();rr(x,W-m*.72,y,m*.44,26,6);x.fill()}}
+  const slots=[];
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++)slots.push([m+c*(sw+gap),m+r*(sh+gap)]);
+  slots.forEach(([sx,sy],i)=>{
+    x.save();rr(x,sx,sy,sw,sh,t.film?4:22);x.clip();
+    if(ph[i])cover(x,ph[i],sx,sy,sw,sh,currentFilter);
+    else{x.fillStyle='rgba(128,128,128,.28)';x.fillRect(sx,sy,sw,sh);x.fillStyle='rgba(255,255,255,.7)';x.font=`${Math.min(sw,sh)*.3}px system-ui`;x.textAlign='center';x.textBaseline='middle';x.fillText(i+1,sx+sw/2,sy+sh/2)}
+    x.restore();
+    x.save();x.strokeStyle=t.st;x.lineWidth=t.film?3:8;if(t.dash)x.setLineDash([22,14]);
+    if(t.glow){x.shadowColor=t.st;x.shadowBlur=24*s}
+    rr(x,sx,sy,sw,sh,t.film?4:22);x.stroke();x.restore();
+  });
+  if(t.d){
+    x.textAlign='center';x.textBaseline='middle';x.font=`${m*1.5}px serif`;
+    slots.forEach(([sx,sy],i)=>{
+      x.save();x.translate(sx+4,sy+4);x.rotate(-.35);x.fillText(t.d,0,0);x.restore();
+      x.save();x.translate(sx+sw-4,sy+sh-4);x.rotate(.35);x.fillText(t.d,0,0);x.restore();
+    });
+    for(let i=1;i<=5;i++){x.fillText(t.d,W*i/6,m*.55)}
+    x.font=`${m*1.3}px serif`;x.fillText(t.d,m*1.6,H-foot*.45);x.fillText(t.d,W-m*1.6,H-foot*.45);
+  }
+  x.fillStyle=t.fg;x.textAlign='center';x.textBaseline='middle';
+  x.font=`italic bold ${foot*.34}px Georgia,serif`;
+  x.fillText(cap||t.cap,W/2,H-foot*.6,W*.7);
+  x.font=`${foot*.16}px system-ui,sans-serif`;x.globalAlpha=.8;
+  x.fillText(new Date().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'}),W/2,H-foot*.25);
+}
+
+function N(){return LAY[layout].c*LAY[layout].r}
+function render(){
+  draw($('out'),layout,T[ti],photos,$('cap').value.trim(),.6);
+  $('cnt').textContent=`Foto ${Math.min(photos.length+1,N())}/${N()}`;
+  $('shot').disabled=busy;
+}
+function buildThumbs(){
+  const f=$('frames');f.innerHTML='';
+  T.forEach((t,i)=>{
+    const d=document.createElement('div');d.className='fr'+(i===ti?' on':'');
+    const cv=document.createElement('canvas');draw(cv,layout,t,[],'',.1);
+    d.appendChild(cv);d.appendChild(document.createTextNode(t.n));
+    d.onclick=()=>{ti=i;buildThumbs();render()};f.appendChild(d);
+  });
+}
+function buildLays(){
+  const l=$('lays');l.innerHTML='';
+  Object.entries(LAY).forEach(([k,v])=>{
+    const b=document.createElement('button');b.className='chip'+(k===layout?' on':'');b.textContent=v.n;
+    b.onclick=()=>{if(busy)return;layout=k;photos=[];buildLays();buildThumbs();render()};l.appendChild(b);
+  });
+}
+
+async function startCam(){
+  if(stream)stream.getTracks().forEach(t=>t.stop());
+  const v=$('v'),msg=$('msg');
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:facing,width:{ideal:1280},height:{ideal:960}},audio:false});
+    v.srcObject=stream;await v.play();msg.style.display='none';
+    v.classList.toggle('mirror',mirror&&facing==='user');
+  }catch(e){
+    msg.style.display='flex';
+    msg.textContent='Kamera tidak bisa diakses. Izinkan akses kamera di browser, atau gunakan tombol “Dari galeri”.';
+  }
+}
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+async function countdown(sec){
+  const cd=$('cd');if(!sec)return;cd.style.display='flex';
+  for(let i=sec;i>0;i--){cd.textContent=i;await sleep(1000)}
+  cd.style.display='none';
+}
+function grab(){
+  const v=$('v');if(!v.videoWidth)return false;
+  const c=document.createElement('canvas');c.width=v.videoWidth;c.height=v.videoHeight;
+  const x=c.getContext('2d');
+  if(mirror&&facing==='user'){x.translate(c.width,0);x.scale(-1,1)}
+  x.drawImage(v,0,0);photos.push(c);
+  const f=$('flash');f.style.opacity=.9;setTimeout(()=>f.style.opacity=0,120);
+  return true;
+}
+function review(c,last){
+  return new Promise(res=>{
+    const tempCv = document.createElement('canvas');
+    tempCv.width = c.width; tempCv.height = c.height;
+    const tx = tempCv.getContext('2d');
+    tx.drawImage(c, 0, 0);
+    applyFilter(tx, tempCv.width, tempCv.height, currentFilter);
+
+    $('revi').src=tempCv.toDataURL('image/jpeg',.85);
+    $('rv2').textContent=last?'Selesai ✓':'Lanjut ▶';
+    $('rev').style.display='flex';
+    $('rv1').onclick=()=>{$('rev').style.display='none';res('retake')};
+    $('rv2').onclick=()=>{$('rev').style.display='none';res('ok')};
+  });
+}
+async function shoot(){
+  if(busy)return;
+  if(!$('v').videoWidth){alert('Kamera belum aktif. Gunakan “Dari galeri” jika kamera tidak tersedia.');return}
+  busy=true;if(photos.length>=N())photos=[];render();
+  while(photos.length<N()){
+    await countdown(+$('tm').value);
+    if(!grab())break;
+    render();
+    const act=await review(photos[photos.length-1],photos.length>=N());
+    if(act==='retake'){photos.pop();render()}
+  }
+  busy=false;render();
+}
+async function addFiles(files){
+  if(photos.length>=N())photos=[];
+  for(const f of files){
+    if(photos.length>=N())break;
+    try{const b=await createImageBitmap(f);const c=document.createElement('canvas');c.width=b.width;c.height=b.height;c.getContext('2d').drawImage(b,0,0);photos.push(c)}catch(e){}
+  }
+  render();
+}
+async function save(){
+  const c=document.createElement('canvas');
+  draw(c,layout,T[ti],photos,$('cap').value.trim(),1);
+  const blob=await new Promise(r=>c.toBlob(r,'image/png'));
+  const name=`photobooth-${Date.now()}.png`;
+  let dls=null;try{dls=await claude.use('downloads')}catch(e){}
+  if(dls){try{await dls.save({filename:name,data:blob});return}catch(e){if(e&&e.code==='declined')return}}
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();
+  if(/iPhone|iPad|iPod/.test(navigator.userAgent)){$('ovi').src=url;$('ov').style.display='flex'}
+}
+
+$('shot').onclick=shoot;
+$('sw').onclick=()=>{if(busy)return;facing=facing==='user'?'environment':'user';startCam()};
+$('mir').onclick=()=>{mirror=!mirror;$('mir'].classList.toggle('on',mirror);$('v'].classList.toggle('mirror',mirror&&facing==='user')};
+$('up').onclick=()=>$('file').click();
+$('file').onchange=e=>{addFiles([...e.target.files]);e.target.value=''};
+$('reset').onclick=()=>{if(busy)return;photos=[];render()};
+$('cap').oninput=render;
+$('filterSel').onchange=e=>{currentFilter=e.target.value;render();};
+$('dl').onclick=save;
+$('ovc').onclick=()=>$('ov').style.display='none';
+
+buildLays();buildThumbs();render();startCam();
+</script>
+</body>
+</html>
